@@ -1,4 +1,4 @@
-a// netlify/functions/generate.js
+// netlify/functions/generate.js
 //
 // This function runs on Netlify's servers, NOT in the browser.
 // It receives a prompt from the QualiCoach toolkit page, calls
