@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QualiCoach AI Research Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0F1F3D;
+    --gold: #C8A24A;
+    --parchment: #F7F4ED;
+    --slate: #5B6478;
+    --line: #DCD6C6;
+    --error-bg: #FBEAEA;
+    --error-border: #D98C8C;
+    --error-text: #7A2E2E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--parchment);
+    font-family: 'Inter', sans-serif;
+    color: var(--navy);
+  }
+  .qc-header {
+    background: var(--navy);
+    padding: 28px 32px 0;
+  }
+  .qc-header-inner { max-width: 880px; margin: 0 auto; }
+  .qc-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .qc-h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 22px;
+    color: var(--parchment);
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+  .qc-sub {
+    font-size: 13px;
+    color: #9AA3B8;
+    margin: 0 0 20px;
+  }
+  .qc-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .qc-tab {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #C9CEDB;
+    background: transparent;
+    border: none;
+    border-radius: 6px 6px 0 0;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+  .qc-tab.active {
+    color: var(--navy);
+    background: var(--parchment);
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 36px 32px 80px;
+  }
+  .qc-tool { display: none; }
+  .qc-tool.active { display: block; }
+  .qc-intro { margin-bottom: 28px; }
+  .qc-intro-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .qc-intro h2 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 28px;
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+  .qc-intro p {
+    font-size: 14px;
+    color: var(--slate);
+    margin: 0;
+    line-height: 1.6;
+    max-width: 560px;
+  }
+  .qc-grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+  label.qc-field { display: block; margin-bottom: 18px; }
+  .qc-label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  input.qc-input, textarea.qc-input, select.qc-input {
+    width: 100%;
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 16px;
+    color: var(--navy);
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  textarea.qc-input { resize: vertical; }
+  input.qc-input:focus, textarea.qc-input:focus, select.qc-input:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+  }
+  button.qc-generate {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--parchment);
+    background: var(--navy);
+    border: none;
+    border-radius: 4px;
+    padding: 13px 28px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  button.qc-generate:disabled {
+    background: #8A8470;
+    cursor: not-allowed;
+  }
+  .qc-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(247,244,237,0.4);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    display: inline-block;
+    animation: qc-spin 0.8s linear infinite;
+  }
+  @keyframes qc-spin { to { transform: rotate(360deg); } }
+  .qc-error {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: 4px;
+    color: var(--error-text);
+    font-size: 13px;
+    display: none;
+  }
+  .qc-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .qc-section-label::before {
+    content: "";
+    width: 14px;
+    height: 1px;
+    background: var(--gold);
+    display: inline-block;
+  }
+  .qc-card {
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .qc-card p {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 16px;
+    color: var(--navy);
+    margin: 0;
+    line-height: 1.5;
+  }
+  .qc-card p.qc-large { font-size: 18px; }
+  .qc-card p.qc-italic { font-style: italic; line-height: 1.6; }
+  .qc-note-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 0 0 3px;
+  }
+  .qc-note-body {
+    font-size: 14px;
+    color: var(--slate);
+    margin: 0 0 12px;
+    line-height: 1.5;
+  }
+  .qc-output { margin-top: 32px; }
+  .qc-output-group { margin-bottom: 24px; }
+  @media (max-width: 720px) {
+    .qc-grid-two { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="qc-header">
+  <div class="qc-header-inner">
+    <div class="qc-eyebrow">QualiCoach Research Tools</div>
+    <h1 class="qc-h1">Structure &rarr; Alignment &rarr; Clarity</h1>
+    <p class="qc-sub">Three guided builders to move your dissertation proposal forward — one piece at a time.</p>
+    <nav class="qc-tabs">
+      <button class="qc-tab active" data-tool="rq">RQ Builder</button>
+      <button class="qc-tab" data-tool="purpose">Purpose Builder</button>
+      <button class="qc-tab" data-tool="interview">Interview Builder</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- TOOL 1: Research Question Builder -->
+  <section class="qc-tool active" id="tool-rq">
+    <div class="qc-intro">
+      <div class="qc-intro-eyebrow">Tool 01 — Structure</div>
+      <h2>Research Question Builder</h2>
+      <p>Enter your study's core elements. You'll get a central research question, aligned subquestions, and a note on why each one fits your methodology — not a generic list, but questions built from your actual study.</p>
+    </div>
+
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Topic</span>
+        <input class="qc-input" id="rq-topic" placeholder="e.g., Moral injury recovery among combat veterans" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Population</span>
+        <input class="qc-input" id="rq-population" placeholder="e.g., Post-9/11 combat veterans, ages 30–55" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Setting</span>
+        <input class="qc-input" id="rq-setting" placeholder="e.g., VA-affiliated peer support groups, Southeastern US" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Methodology</span>
+        <select class="qc-input" id="rq-methodology">
+          <option value="" disabled selected>Select…</option>
+          <option>Phenomenology</option>
+          <option>Grounded Theory</option>
+          <option>Case Study</option>
+          <option>Narrative Inquiry</option>
+          <option>Ethnography</option>
+        </select>
+      </label>
+    </div>
+    <label class="qc-field">
+      <span class="qc-label">Research Problem</span>
+      <textarea class="qc-input" id="rq-problem" rows="3" placeholder="What gap, tension, or unresolved issue does this study respond to?"></textarea>
+    </label>
+
+    <button class="qc-generate" id="rq-generate" disabled>Generate Research Questions</button>
+    <div class="qc-error" id="rq-error"></div>
+    <div class="qc-output" id="rq-output"></div>
+  </section>
+
+  <!-- TOOL 2: Purpose Statement Builder -->
+  <section class="qc-tool" id="tool-purpose">
+    <div class="qc-intro">
+      <div class="qc-intro-eyebrow">Tool 02 — Alignment</div>
+      <h2>Purpose Statement Builder</h2>
+      <p>A purpose statement only works if every clause maps back to your actual study. Enter the four elements below and you'll get a formal statement plus a breakdown of exactly where each element shows up.</p>
+    </div>
+
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Topic</span>
+        <input class="qc-input" id="ps-topic" placeholder="e.g., Transition experiences of first-generation doctoral students" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Population</span>
+        <input class="qc-input" id="ps-population" placeholder="e.g., First-generation EdD students in year one" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Site</span>
+        <input class="qc-input" id="ps-site" placeholder="e.g., Three public universities in the Midwest" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Phenomenon</span>
+        <input class="qc-input" id="ps-phenomenon" placeholder="e.g., Sense of belonging during coursework" />
+      </label>
+    </div>
+
+    <button class="qc-generate" id="ps-generate" disabled>Generate Purpose Statement</button>
+    <div class="qc-error" id="ps-error"></div>
+    <div class="qc-output" id="ps-output"></div>
+  </section>
+
+  <!-- TOOL 3: Interview Question Generator -->
+  <section class="qc-tool" id="tool-interview">
+    <div class="qc-intro">
+      <div class="qc-intro-eyebrow">Tool 03 — Clarity</div>
+      <h2>Interview Question Generator</h2>
+      <p>Paste your research questions and methodology, and get a complete semi-structured protocol — opening, core, probes, and closing — ready to bring into your IRB application or pilot interview.</p>
+    </div>
+
+    <label class="qc-field">
+      <span class="qc-label">Research Questions</span>
+      <textarea class="qc-input" id="iq-rqs" rows="3" placeholder="Paste your central research question and subquestions"></textarea>
+    </label>
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Methodology</span>
+        <select class="qc-input" id="iq-methodology">
+          <option value="" disabled selected>Select…</option>
+          <option>Phenomenology</option>
+          <option>Grounded Theory</option>
+          <option>Case Study</option>
+          <option>Narrative Inquiry</option>
+          <option>Ethnography</option>
+        </select>
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Participants</span>
+        <input class="qc-input" id="iq-participants" placeholder="e.g., 12 combat veterans who completed peer support" />
+      </label>
+    </div>
+
+    <button class="qc-generate" id="iq-generate" disabled>Generate Interview Protocol</button>
+    <div class="qc-error" id="iq-error"></div>
+    <div class="qc-output" id="iq-output"></div>
+  </section>
+
+</main>
+
+<script>
+/* ============================================================
+   QualiCoach AI Research Toolkit — standalone build
+   ------------------------------------------------------------
+   This page calls a Netlify serverless function at
+   /.netlify/functions/generate, which holds the real Anthropic
+   API key server-side and proxies requests to Claude. See
+   netlify/functions/generate.js in this same project.
+   ============================================================ */
+
+const ENDPOINT = "/.netlify/functions/generate"; // backend function — see netlify/functions/generate.js
+
+async function callClaudeAPI(prompt) {
+  const response = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!response.ok) throw new Error("Request failed");
+  const data = await response.json();
+  // Expecting the backend to return { content: [...] } in Anthropic's
+  // native shape, OR pre-parsed JSON under data.result — handle both.
+  if (data.result) return data.result;
+  const text = (data.content || [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n");
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+/* ---------- tab switching ---------- */
+document.querySelectorAll(".qc-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".qc-tab").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll(".qc-tool").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("tool-" + tab.dataset.tool).classList.add("active");
+  });
+});
+
+/* ---------- helpers ---------- */
+function setLoading(btn, loading, label) {
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<span class="qc-spinner"></span> Generating…'
+    : label;
+}
+function showError(el, msg) {
+  el.textContent = msg ? msg + " Try again — if it persists, simplify your inputs and re-generate." : "";
+  el.style.display = msg ? "block" : "none";
+}
+function card(html, large, italic) {
+  return `<div class="qc-card"><p class="${large ? "qc-large" : ""} ${italic ? "qc-italic" : ""}">${html}</p></div>`;
+}
+function sectionLabel(text) {
+  return `<div class="qc-section-label">${text}</div>`;
+}
+
+/* ---------- Tool 1: Research Question Builder ---------- */
+const rqFields = ["rq-topic", "rq-population", "rq-setting", "rq-methodology", "rq-problem"];
+const rqBtn = document.getElementById("rq-generate");
+function rqCheckReady() {
+  rqBtn.disabled = !rqFields.every((id) => document.getElementById(id).value.trim());
+}
+rqFields.forEach((id) => document.getElementById(id).addEventListener("input", rqCheckReady));
+
+rqBtn.addEventListener("click", async () => {
+  const topic = document.getElementById("rq-topic").value;
+  const population = document.getElementById("rq-population").value;
+  const setting = document.getElementById("rq-setting").value;
+  const methodology = document.getElementById("rq-methodology").value;
+  const problem = document.getElementById("rq-problem").value;
+  const errorEl = document.getElementById("rq-error");
+  const outputEl = document.getElementById("rq-output");
+
+  setLoading(rqBtn, true, "Generate Research Questions");
+  showError(errorEl, "");
+  outputEl.innerHTML = "";
+
+  try {
+    const prompt = `You are a doctoral qualitative research methodologist. Given the study details below, generate rigorous, doctoral-level qualitative research questions.
+
+Topic: ${topic}
+Population: ${population}
+Setting: ${setting}
+Research problem: ${problem}
+Methodology: ${methodology}
+
+Return ONLY valid JSON, no markdown, in exactly this shape:
+{
+  "mainQuestion": "the single overarching central research question",
+  "subquestions": ["subquestion 1", "subquestion 2", "subquestion 3"],
+  "alternateQuestions": ["a different framing of a strong RQ", "another distinct strong RQ"],
+  "alignmentNotes": [
+    {"question": "restate which question", "note": "1-2 sentences on why it aligns with the methodology, population, and problem"}
+  ]
+}
+Write in formal academic register appropriate for a dissertation proposal. Questions must be open-ended, non-binary, and methodologically appropriate for ${methodology}.`;
+
+    const result = await callClaudeAPI(prompt);
+
+    let html = sectionLabel("Central Research Question") + card(result.mainQuestion, true);
+    html += sectionLabel("Subquestions");
+    (result.subquestions || []).forEach((q) => (html += card(q)));
+    html += sectionLabel("Alternate Framings");
+    (result.alternateQuestions || []).forEach((q) => (html += card(q)));
+    html += sectionLabel("Alignment Notes");
+    (result.alignmentNotes || []).forEach((a) => {
+      html += `<p class="qc-note-title">${a.question}</p><p class="qc-note-body">${a.note}</p>`;
+    });
+    outputEl.innerHTML = html;
+  } catch (e) {
+    showError(errorEl, "Something went wrong generating your research questions.");
+  } finally {
+    setLoading(rqBtn, false, "Generate Research Questions");
+  }
+});
+
+/* ---------- Tool 2: Purpose Statement Builder ---------- */
+const psFields = ["ps-topic", "ps-population", "ps-site", "ps-phenomenon"];
+const psBtn = document.getElementById("ps-generate");
+function psCheckReady() {
+  psBtn.disabled = !psFields.every((id) => document.getElementById(id).value.trim());
+}
+psFields.forEach((id) => document.getElementById(id).addEventListener("input", psCheckReady));
+
+psBtn.addEventListener("click", async () => {
+  const topic = document.getElementById("ps-topic").value;
+  const population = document.getElementById("ps-population").value;
+  const site = document.getElementById("ps-site").value;
+  const phenomenon = document.getElementById("ps-phenomenon").value;
+  const errorEl = document.getElementById("ps-error");
+  const outputEl = document.getElementById("ps-output");
+
+  setLoading(psBtn, true, "Generate Purpose Statement");
+  showError(errorEl, "");
+  outputEl.innerHTML = "";
+
+  try {
+    const prompt = `You are a doctoral qualitative research methodologist. Write a formal dissertation-style purpose statement using these study elements:
+
+Topic: ${topic}
+Population: ${population}
+Site: ${site}
+Phenomenon: ${phenomenon}
+
+Return ONLY valid JSON, no markdown, in exactly this shape:
+{
+  "purposeStatement": "The purpose of this qualitative study is... (full formal purpose statement, 2-4 sentences, naming the methodology implicitly through verbs like 'explore', 'understand', or 'describe')",
+  "alignmentNotes": [
+    {"element": "Population", "note": "how the statement reflects this element"},
+    {"element": "Site", "note": "how the statement reflects this element"},
+    {"element": "Phenomenon", "note": "how the statement reflects this element"}
+  ]
+}`;
+
+    const result = await callClaudeAPI(prompt);
+
+    let html = sectionLabel("Purpose Statement") + card(result.purposeStatement, true, true);
+    html += sectionLabel("Alignment Notes");
+    (result.alignmentNotes || []).forEach((a) => {
+      html += `<p class="qc-note-title">${a.element}</p><p class="qc-note-body">${a.note}</p>`;
+    });
+    outputEl.innerHTML = html;
+  } catch (e) {
+    showError(errorEl, "Something went wrong generating your purpose statement.");
+  } finally {
+    setLoading(psBtn, false, "Generate Purpose Statement");
+  }
+});
+
+/* ---------- Tool 3: Interview Question Generator ---------- */
+const iqFields = ["iq-rqs", "iq-methodology", "iq-participants"];
+const iqBtn = document.getElementById("iq-generate");
+function iqCheckReady() {
+  iqBtn.disabled = !iqFields.every((id) => document.getElementById(id).value.trim());
+}
+iqFields.forEach((id) => document.getElementById(id).addEventListener("input", iqCheckReady));
+
+iqBtn.addEventListener("click", async () => {
+  const rqs = document.getElementById("iq-rqs").value;
+  const methodology = document.getElementById("iq-methodology").value;
+  const participants = document.getElementById("iq-participants").value;
+  const errorEl = document.getElementById("iq-error");
+  const outputEl = document.getElementById("iq-output");
+
+  setLoading(iqBtn, true, "Generate Interview Protocol");
+  showError(errorEl, "");
+  outputEl.innerHTML = "";
+
+  try {
+    const prompt = `You are a doctoral qualitative research methodologist designing a semi-structured interview protocol.
+
+Research questions: ${rqs}
+Methodology: ${methodology}
+Participants: ${participants}
+
+Return ONLY valid JSON, no markdown, in exactly this shape:
+{
+  "opening": ["1-2 rapport-building, low-stakes opening questions"],
+  "core": ["4-6 core questions directly tied to the research questions, open-ended, methodologically appropriate for ${methodology}"],
+  "probes": ["3-4 generic follow-up probes that work across most core questions, e.g. 'Can you say more about that?'"],
+  "closing": ["1-2 closing questions, including one inviting anything the participant wants to add"]
+}`;
+
+    const result = await callClaudeAPI(prompt);
+
+    let html = "";
+    const groups = [
+      ["Opening Questions", result.opening],
+      ["Core Questions", result.core],
+      ["Follow-Up Probes", result.probes],
+      ["Closing Questions", result.closing],
+    ];
+    groups.forEach(([label, items]) => {
+      html += `<div class="qc-output-group">${sectionLabel(label)}`;
+      (items || []).forEach((q) => (html += card(q)));
+      html += `</div>`;
+    });
+    outputEl.innerHTML = html;
+  } catch (e) {
+    showError(errorEl, "Something went wrong generating your interview protocol.");
+  } finally {
+    setLoading(iqBtn, false, "Generate Interview Protocol");
+  }
+});
+</script>
+
+</body>
+</html>
