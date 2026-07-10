@@ -6,10 +6,20 @@
 // variable, never exposed to visitors), and returns the result.
 
 exports.handler = async function (event) {
-  // Only allow POST requests
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers, body: "" };
+  }
+
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
+      headers,
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
@@ -20,6 +30,7 @@ exports.handler = async function (event) {
     if (!prompt || typeof prompt !== "string") {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ error: "Missing or invalid 'prompt' field" }),
       };
     }
@@ -28,6 +39,7 @@ exports.handler = async function (event) {
     if (!apiKey) {
       return {
         statusCode: 500,
+        headers,
         body: JSON.stringify({
           error: "Server is missing ANTHROPIC_API_KEY. Set it in Netlify site settings.",
         }),
@@ -52,6 +64,7 @@ exports.handler = async function (event) {
       const errText = await response.text();
       return {
         statusCode: response.status,
+        headers,
         body: JSON.stringify({ error: "Anthropic API error", details: errText }),
       };
     }
@@ -69,22 +82,21 @@ exports.handler = async function (event) {
       result = JSON.parse(clean);
     } catch (parseErr) {
       return {
-        statusCode: 502,
-        body: JSON.stringify({
-          error: "Model did not return valid JSON",
-          raw: text,
-        }),
+        statusCode: 200,
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ result: text }),
       };
     }
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ result }),
     };
   } catch (err) {
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ error: "Unexpected server error", details: String(err) }),
     };
   }
