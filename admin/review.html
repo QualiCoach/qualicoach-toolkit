@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>QualiCoach — Draft Review</title>
+<style>
+  :root {
+    --navy: #0f2540;
+    --gold: #c9a227;
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --border: #e0ddd3;
+    --text: #1a1a1a;
+    --muted: #6b6b63;
+    --danger: #a3342b;
+    --success: #2f6b3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 20px 24px;
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  header p { margin: 4px 0 0; font-size: 13px; color: #cfd8e3; }
+  main { max-width: 780px; margin: 0 auto; padding: 24px; }
+  #gate { max-width: 400px; margin: 80px auto; padding: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+  #gate input { width: 100%; padding: 10px; margin: 12px 0; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
+  #gate button, .actions button, #refresh { background: var(--navy); color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  #gate button:hover, #refresh:hover { opacity: 0.9; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .meta .title { font-weight: 600; font-size: 15px; }
+  .meta .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold); background: #fbf6e8; padding: 2px 8px; border-radius: 3px; }
+  .body-preview {
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    background: #fbfaf7;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+  .notes { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; margin-bottom: 10px; font-family: inherit; }
+  .actions { display: flex; gap: 8px; }
+  .actions .reject { background: var(--danger); }
+  .actions .approve { background: var(--success); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  .section-label { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 28px 0 12px; }
+  .recent-row { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .status-approved { color: var(--success); }
+  .status-rejected { color: var(--danger); }
+  #toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .error-banner { background: #fbeceb; border: 1px solid var(--danger); color: var(--danger); padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2 style="margin-top:0;">QualiCoach Review</h2>
+  <p style="color:var(--muted); font-size:13px;">Enter your admin token to view pending drafts.</p>
+  <input type="password" id="tokenInput" placeholder="Admin token">
+  <button onclick="saveTokenAndLoad()">Continue</button>
+  <p id="gateError" style="color:var(--danger); font-size:13px;"></p>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>QualiCoach — Draft Review</h1>
+    <p>Nothing publishes until you approve it here.</p>
+  </header>
+  <main>
+    <div id="toolbar">
+      <span id="countLabel" style="font-size:13px; color:var(--muted);"></span>
+      <button id="refresh" onclick="loadDrafts()">Refresh</button>
+    </div>
+    <div id="errorBanner"></div>
+    <div id="pendingList"></div>
+    <div class="section-label">Recently decided</div>
+    <div id="recentList"></div>
+  </main>
+</div>
+
+<script>
+  const TOKEN_KEY = 'qc_admin_token';
+
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  function saveTokenAndLoad() {
+    const val = document.getElementById('tokenInput').value.trim();
+    if (!val) return;
+    localStorage.setItem(TOKEN_KEY, val);
+    init();
+  }
+
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(path, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        'x-admin-token': getToken(),
+      },
+    });
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('gate').style.display = 'block';
+      document.getElementById('gateError').textContent = 'Token rejected — try again.';
+      throw new Error('Unauthorized');
+    }
+    return res;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  async function loadDrafts() {
+    const errorBanner = document.getElementById('errorBanner');
+    errorBanner.innerHTML = '';
+    try {
+      const res = await apiFetch('/.netlify/functions/list-drafts');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Request failed (${res.status})`);
+      }
+      const { pending, recent } = await res.json();
+      renderPending(pending || []);
+      renderRecent(recent || []);
+      document.getElementById('countLabel').textContent =
+        `${(pending || []).length} awaiting review`;
+    } catch (err) {
+      errorBanner.innerHTML = `<div class="error-banner">${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderPending(drafts) {
+    const container = document.getElementById('pendingList');
+    if (drafts.length === 0) {
+      container.innerHTML = '<div class="empty">Nothing waiting on you right now.</div>';
+      return;
+    }
+    container.innerHTML = drafts.map((d) => `
+      <div class="card" id="card-${d.id}">
+        <div class="meta">
+          <span class="title">${escapeHtml(d.title || d.draft_type)}</span>
+          <span class="tag">${escapeHtml(d.system)}</span>
+        </div>
+        <div class="body-preview">${escapeHtml(d.content && d.content.body)}</div>
+        <textarea class="notes" id="notes-${d.id}" placeholder="Optional note (visible in history, not published)"></textarea>
+        <div class="actions">
+          <button class="approve" onclick="review('${d.id}', 'approve')">Approve</button>
+          <button class="reject" onclick="review('${d.id}', 'reject')">Reject</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderRecent(items) {
+    const container = document.getElementById('recentList');
+    if (items.length === 0) {
+      container.innerHTML = '<div class="empty">No decisions yet.</div>';
+      return;
+    }
+    container.innerHTML = items.map((d) => `
+      <div class="recent-row">
+        <span>${escapeHtml(d.title || d.draft_type)} <span style="color:var(--muted)">(${escapeHtml(d.system)})</span></span>
+        <span class="status-${escapeHtml(d.status)}">${escapeHtml(d.status)}</span>
+      </div>
+    `).join('');
+  }
+
+  async function review(draftId, action) {
+    const notesEl = document.getElementById(`notes-${draftId}`);
+    const reviewer_notes = notesEl ? notesEl.value : '';
+    try {
+      const res = await apiFetch('/.netlify/functions/review-draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ draft_id: draftId, action, reviewer_notes }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Request failed (${res.status})`);
+      }
+      await loadDrafts();
+    } catch (err) {
+      document.getElementById('errorBanner').innerHTML =
+        `<div class="error-banner">${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function init() {
+    const token = getToken();
+    if (!token) {
+      document.getElementById('gate').style.display = 'block';
+      document.getElementById('app').style.display = 'none';
+      return;
+    }
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadDrafts();
+  }
+
+  init();
+</script>
+
+</body>
+</html>

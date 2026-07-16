@@ -1,0 +1,26 @@
+# ============================================================================
+# QualiCoach Orchestration — Netlify config additions
+# ----------------------------------------------------------------------------
+# If you already have a netlify.toml in the qualicoach-toolkit repo, merge
+# these sections into it rather than replacing the file — keep your existing
+# [build] and any current [[redirects]] / [functions] settings.
+# ============================================================================
+
+[build]
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Runs the orchestration router every 5 minutes. Adjust the cron expression
+# to match your actual job volume — every 5 min is a reasonable starting
+# point for a low-volume solo operation and keeps Anthropic API calls from
+# clustering into large bursts.
+[functions."job-router"]
+  schedule = "*/5 * * * *"
+
+# Serve the approval page at a predictable, unlisted path.
+[[redirects]]
+  from = "/admin/review"
+  to = "/admin/review.html"
+  status = 200
