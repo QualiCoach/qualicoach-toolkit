@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -52,8 +53,13 @@
   .qc-tabs {
     display: flex;
     gap: 4px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
+  .qc-tabs::-webkit-scrollbar { height: 4px; }
+  .qc-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 2px; }
   .qc-tab {
     font-family: 'Inter', sans-serif;
     font-size: 13px;
@@ -64,6 +70,8 @@
     border-radius: 6px 6px 0 0;
     padding: 10px 18px;
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .qc-tab.active {
     color: var(--navy);
@@ -508,37 +516,71 @@
     <div class="qc-output" id="ps-output"></div>
   </section>
 
-  <!-- TOOL 3: Interview Question Generator -->
+  <!-- TOOL 3: Interview Builder -->
   <section class="qc-tool" id="tool-interview">
     <div class="qc-intro">
       <div class="qc-intro-eyebrow">Tool 03 — Clarity</div>
-      <h2>Interview Question Generator</h2>
-      <p>Paste your research questions and methodology, and get a complete semi-structured protocol — opening, core, probes, and closing — ready to bring into your IRB application or pilot interview.</p>
+      <h2>Interview Builder</h2>
+      <p>Develop a semistructured qualitative interview protocol aligned with your research question, purpose statement, and methodology.</p>
     </div>
+
+    <div class="qc-notice" id="ib-integrity-notice">
+      <strong>Academic Integrity Notice:</strong> This tool assists with interview protocol development but does not replace methodological expertise or institutional requirements. Users are responsible for ensuring all interview questions align with their methodology, research purpose, and IRB requirements.
+    </div>
+
+    <div class="qc-card" id="ib-saved-suggestion" style="display:none;">
+      <p class="qc-note-title">Saved details found</p>
+      <p class="qc-note-body" id="ib-saved-suggestion-text"></p>
+      <button class="qc-secondary" id="ib-use-saved">Use Saved Details</button>
+    </div>
+
     <label class="qc-field">
-      <span class="qc-label">Research Questions</span>
-      <textarea class="qc-input" id="iq-rqs" rows="3" placeholder="Paste your central research question and subquestions"></textarea>
+      <span class="qc-label">Research Topic</span>
+      <input class="qc-input" id="ib-topic" placeholder="e.g., Veterans' experiences seeking peer-to-peer mental health support after COVID-19" />
+    </label>
+    <label class="qc-field">
+      <span class="qc-label">Population</span>
+      <input class="qc-input" id="ib-population" placeholder="e.g., Post-9/11 combat veterans" />
+    </label>
+    <label class="qc-field">
+      <span class="qc-label">Research Purpose</span>
+      <textarea class="qc-input" id="ib-purpose" rows="4" placeholder="Paste or write your purpose statement."></textarea>
+    </label>
+    <label class="qc-field">
+      <span class="qc-label">Central Research Question</span>
+      <textarea class="qc-input" id="ib-rq" rows="3" placeholder="Paste your approved research question."></textarea>
     </label>
     <div class="qc-grid-two">
       <label class="qc-field">
         <span class="qc-label">Methodology</span>
-        <select class="qc-input" id="iq-methodology">
+        <select class="qc-input" id="ib-methodology">
           <option value="" disabled selected>Select...</option>
+          <option>Generic Qualitative</option>
           <option>Phenomenology</option>
-          <option>Grounded Theory</option>
           <option>Case Study</option>
+          <option>Grounded Theory</option>
           <option>Narrative Inquiry</option>
           <option>Ethnography</option>
+          <option>Other</option>
         </select>
       </label>
       <label class="qc-field">
-        <span class="qc-label">Participants</span>
-        <input class="qc-input" id="iq-participants" placeholder="e.g., 12 combat veterans who completed peer support" />
+        <span class="qc-label">Number of Primary Questions</span>
+        <select class="qc-input" id="ib-count">
+          <option>6</option>
+          <option selected>8</option>
+          <option>10</option>
+        </select>
       </label>
     </div>
-    <button class="qc-generate" id="iq-generate" disabled>Generate Interview Protocol</button>
-    <div class="qc-error" id="iq-error"></div>
-    <div class="qc-output" id="iq-output"></div>
+    <div class="qc-checklist-item" id="ib-probes-item">
+      <input type="checkbox" id="ib-probes" checked />
+      <label for="ib-probes">Include Follow-up Probes</label>
+    </div>
+
+    <button class="qc-generate" id="ib-generate" disabled style="margin-top:18px;">Generate Interview Protocol</button>
+    <div class="qc-error" id="ib-error"></div>
+    <div class="qc-output" id="ib-output"></div>
   </section>
 
   <!-- TOOL 4: Methodology Alignment Checker -->
@@ -593,7 +635,7 @@
     <div class="qc-intro">
       <div class="qc-intro-eyebrow">Tool 06 — Structure</div>
       <h2>Topic Developer</h2>
-      <p>Start with a broad interest, leave with ten dissertation-quality topic options — each scored for feasibility and originality, with a recommended methodology.</p>
+      <p>Start with a broad interest, leave with dissertation-quality topic options — five at a time, each scored for feasibility and originality, with a recommended methodology. Generate more batches if none feel right yet.</p>
     </div>
 
     <div class="qc-step-indicator">
@@ -647,6 +689,9 @@
     <div class="qc-step-panel" id="td-step-2">
       <div class="qc-section-label">Choose a Direction</div>
       <div id="td-topic-picks"></div>
+      <div class="qc-step-nav">
+        <button class="qc-secondary" id="td-more">Generate 5 More Topics</button>
+      </div>
       <div class="qc-step-nav">
         <button class="qc-secondary" id="td-step2-back">Back</button>
         <button class="qc-generate" id="td-step2-next" disabled>Confirm This Topic</button>
@@ -876,49 +921,214 @@ psBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---------- Tool 3: Interview Question Generator ---------- */
-const iqFields = ["iq-rqs","iq-methodology","iq-participants"];
-const iqBtn = document.getElementById("iq-generate");
-function iqCheckReady() {
-  iqBtn.disabled = !iqFields.every((id) => document.getElementById(id).value.trim());
+/* ---------- Tool 3: Interview Builder ---------- */
+var ibLastResult = null;
+var ibLastMeta = {};
+const IB_CLOSING_QUESTIONS = [
+  "Is there anything else you'd like to share?",
+  "Is there anything I should have asked but didn't?"
+];
+
+const ibRequiredFields = ["ib-topic", "ib-population", "ib-purpose", "ib-rq", "ib-methodology"];
+const ibBtn = document.getElementById("ib-generate");
+function ibCheckReady() {
+  ibBtn.disabled = !ibRequiredFields.every(function(id) { return document.getElementById(id).value.trim(); });
 }
-iqFields.forEach((id) => {
+ibRequiredFields.forEach(function(id) {
   var el = document.getElementById(id);
-  el.addEventListener("input", iqCheckReady);
-  el.addEventListener("change", iqCheckReady);
+  el.addEventListener("input", ibCheckReady);
+  el.addEventListener("change", ibCheckReady);
 });
 
-iqBtn.addEventListener("click", async () => {
-  const rqs = document.getElementById("iq-rqs").value;
-  const methodology = document.getElementById("iq-methodology").value;
-  const participants = document.getElementById("iq-participants").value;
-  const errorEl = document.getElementById("iq-error");
-  const outputEl = document.getElementById("iq-output");
-  setLoading(iqBtn, true, "Generate Interview Protocol");
+/* Offer saved details from Problem Builder (preferred) or Topic Developer,
+   without ever auto-filling. Only Topic and Population are pulled in --
+   Research Purpose and Central Research Question are left for the student
+   to paste from their actual approved documents. */
+function ibCheckSavedDetails() {
+  var raw = localStorageSafeGet("qc_problem_builder_selection");
+  var source = "problem";
+  var sourceLabel = "Problem Builder";
+  if (!raw) {
+    raw = localStorageSafeGet("qc_topic_developer_selection");
+    source = "topic";
+    sourceLabel = "Topic Developer";
+  }
+  var banner = document.getElementById("ib-saved-suggestion");
+  if (!raw) { banner.style.display = "none"; return; }
+  try {
+    var saved = JSON.parse(raw);
+    var topicText = saved.topic || "";
+    var summary = "From " + sourceLabel + ": " + (topicText || "a saved topic");
+    if (saved.population) summary += " — " + saved.population;
+    document.getElementById("ib-saved-suggestion-text").textContent = summary;
+    banner.style.display = "block";
+    banner.dataset.source = source;
+  } catch (e) {
+    banner.style.display = "none";
+  }
+}
+ibCheckSavedDetails();
+
+document.getElementById("ib-use-saved").addEventListener("click", function() {
+  var banner = document.getElementById("ib-saved-suggestion");
+  var key = banner.dataset.source === "problem" ? "qc_problem_builder_selection" : "qc_topic_developer_selection";
+  var raw = localStorageSafeGet(key);
+  if (!raw) return;
+  try {
+    var saved = JSON.parse(raw);
+    if (saved.topic) document.getElementById("ib-topic").value = saved.topic;
+    if (saved.population) document.getElementById("ib-population").value = saved.population;
+    ibCheckReady();
+  } catch (e) {}
+});
+
+ibBtn.addEventListener("click", async function() {
+  const topic = document.getElementById("ib-topic").value.trim();
+  const population = document.getElementById("ib-population").value.trim();
+  const purpose = document.getElementById("ib-purpose").value.trim();
+  const rq = document.getElementById("ib-rq").value.trim();
+  const methodology = document.getElementById("ib-methodology").value;
+  const count = document.getElementById("ib-count").value;
+  const includeProbes = document.getElementById("ib-probes").checked;
+  const errorEl = document.getElementById("ib-error");
+  const outputEl = document.getElementById("ib-output");
+  setLoading(ibBtn, true, "Generate Interview Protocol");
   showError(errorEl, "");
   outputEl.innerHTML = "";
   try {
-    const prompt = "You are a doctoral qualitative research methodologist designing a semi-structured interview protocol.\n\nResearch questions: " + rqs + "\nMethodology: " + methodology + "\nParticipants: " + participants + "\n\nReturn ONLY valid JSON, no markdown, in exactly this shape:\n{\n  \"opening\": [\"1-2 rapport-building, low-stakes opening questions\"],\n  \"core\": [\"4-6 core questions directly tied to the research questions, open-ended, methodologically appropriate for " + methodology + "\"],\n  \"probes\": [\"3-4 generic follow-up probes that work across most core questions\"],\n  \"closing\": [\"1-2 closing questions, including one inviting anything the participant wants to add\"]\n}";
+    const prompt = "You are a doctoral qualitative research methodologist helping a student build a semistructured interview protocol.\n\n" +
+      "Research topic: " + topic + "\n" +
+      "Population: " + population + "\n" +
+      "Research purpose: " + purpose + "\n" +
+      "Central research question: " + rq + "\n" +
+      "Methodology: " + methodology + "\n" +
+      "Number of primary questions requested: " + count + "\n" +
+      "Include follow-up probes: " + (includeProbes ? "yes" : "no") + "\n\n" +
+      "Return ONLY valid JSON, no markdown, in exactly this shape:\n" +
+      "{\n" +
+      "  \"introductionScript\": \"a short spoken opening script covering, in order: a greeting, thanking the participant, a plain-language explanation of the study's purpose, a confidentiality reminder, a request for permission to record, and an estimated interview length\",\n" +
+      "  \"primaryQuestions\": [\n" +
+      "    {\"question\": \"an open-ended, non-leading interview question that cannot be answered yes or no, aligned with the research purpose and methodology\", \"probes\": [\"short natural follow-up probe\"]}\n" +
+      "  ],\n" +
+      "  \"recommendations\": [\"4 to 6 short, specific recommendations for strengthening this protocol before IRB submission\"]\n" +
+      "}\n\n" +
+      "Generate exactly " + count + " objects in primaryQuestions, each grounded in the stated purpose, research question, population, and methodology (" + methodology + "). " +
+      (includeProbes
+        ? "Give every question exactly 2-3 short natural probes (for example: 'Can you tell me more about that?', 'What was that experience like?', 'What happened next?', 'How did that affect you?', 'What meaning did you make of that?'), varied across questions rather than repeated verbatim."
+        : "Return an empty probes array for every question.") +
+      " Every primary question must avoid leading, double-barreled, or yes/no phrasing. recommendations must be concrete and specific to this protocol, not generic boilerplate.";
+
     const result = await callClaudeAPI(prompt);
-    let html = "";
-    const groups = [
-      ["Opening Questions", result.opening],
-      ["Core Questions", result.core],
-      ["Follow-Up Probes", result.probes],
-      ["Closing Questions", result.closing],
-    ];
-    groups.forEach(function(g) {
-      html += '<div class="qc-output-group">' + sectionLabel(g[0]);
-      (g[1] || []).forEach((q) => { html += card(q); });
-      html += '</div>';
-    });
-    outputEl.innerHTML = html;
+    ibLastResult = result;
+    ibLastMeta = { topic: topic, population: population, methodology: methodology, includeProbes: includeProbes };
+    ibRenderOutput(result, includeProbes);
   } catch (e) {
-    showError(errorEl, "Something went wrong generating your interview protocol.");
+    showError(errorEl, "Something went wrong generating the interview protocol.");
   } finally {
-    setLoading(iqBtn, false, "Generate Interview Protocol");
+    setLoading(ibBtn, false, "Generate Interview Protocol");
   }
 });
+
+function ibRenderOutput(result, includeProbes) {
+  const outputEl = document.getElementById("ib-output");
+  let html = "";
+  html += sectionLabel("Interview Introduction") + card(result.introductionScript, false, true);
+
+  html += sectionLabel("Primary Interview Questions");
+  (result.primaryQuestions || []).forEach(function(q, i) {
+    html += '<div class="qc-card"><p class="qc-large">' + (i + 1) + '. ' + q.question + '</p>';
+    if (includeProbes && q.probes && q.probes.length) {
+      q.probes.forEach(function(p) { html += '<p class="qc-note-body">— ' + p + '</p>'; });
+    }
+    html += '</div>';
+  });
+
+  html += sectionLabel("Closing Questions");
+  IB_CLOSING_QUESTIONS.forEach(function(q) { html += card(q); });
+
+  html += sectionLabel("QualiCoach Recommendations");
+  (result.recommendations || []).forEach(function(r) { html += card(r); });
+
+  html += '<div class="qc-step-nav" style="margin-top:20px;">' +
+    '<button class="qc-secondary" id="ib-copy">Copy Interview Protocol</button>' +
+    '<button class="qc-secondary" id="ib-download">Download Interview Protocol (.txt)</button>' +
+    '</div>';
+
+  outputEl.innerHTML = html;
+  document.getElementById("ib-copy").addEventListener("click", ibCopyProtocol);
+  document.getElementById("ib-download").addEventListener("click", ibDownloadProtocol);
+}
+
+function ibBuildPlainText() {
+  if (!ibLastResult) return "";
+  const lines = [];
+  lines.push("INTERVIEW PROTOCOL");
+  lines.push("Topic: " + ibLastMeta.topic);
+  lines.push("Population: " + ibLastMeta.population);
+  lines.push("Methodology: " + ibLastMeta.methodology);
+  lines.push("");
+  lines.push("INTERVIEW INTRODUCTION");
+  lines.push(ibLastResult.introductionScript || "");
+  lines.push("");
+  lines.push("PRIMARY INTERVIEW QUESTIONS");
+  (ibLastResult.primaryQuestions || []).forEach(function(q, i) {
+    lines.push((i + 1) + ". " + q.question);
+    if (ibLastMeta.includeProbes && q.probes) {
+      q.probes.forEach(function(p) { lines.push("   - " + p); });
+    }
+  });
+  lines.push("");
+  lines.push("CLOSING QUESTIONS");
+  IB_CLOSING_QUESTIONS.forEach(function(q) { lines.push("- " + q); });
+  lines.push("");
+  lines.push("QUALICOACH RECOMMENDATIONS");
+  (ibLastResult.recommendations || []).forEach(function(r) { lines.push("- " + r); });
+  return lines.join("\n");
+}
+
+function ibFallbackCopy(text, done) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    done(ok);
+  } catch (e) {
+    done(false);
+  }
+}
+
+function ibCopyProtocol() {
+  const text = ibBuildPlainText();
+  const btn = document.getElementById("ib-copy");
+  function done(ok) {
+    btn.textContent = ok ? "Copied \u2713" : "Copy failed";
+    setTimeout(function() { btn.textContent = "Copy Interview Protocol"; }, 2000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { done(true); }, function() { ibFallbackCopy(text, done); });
+  } else {
+    ibFallbackCopy(text, done);
+  }
+}
+
+function ibDownloadProtocol() {
+  const text = ibBuildPlainText();
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "interview-protocol.txt";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 /* ---------- Tool 4: Methodology Alignment Checker ---------- */
 const acFields = ["ac-rq","ac-methodology","ac-data"];
@@ -1081,6 +1291,33 @@ function tdScoreBadge(label, score) {
   return '<span class="qc-score-badge ' + tier + '">' + label + ": " + score + "/10</span>";
 }
 
+const TD_BATCH_SIZE = 5;
+
+// Kept deliberately short: fewer topics, one sentence per field, and an
+// explicit "compact JSON only" instruction. The original 10-topic version
+// with 2-3 sentence fields generated enough output tokens to trip Netlify's
+// function inactivity timeout (502) on slower responses. This version
+// generates roughly a third of the output text, which comfortably finishes
+// within the timeout while still producing complete, usable topics.
+function tdBuildPrompt(excludeTitles) {
+  var exclusion = "";
+  if (excludeTitles && excludeTitles.length) {
+    exclusion = "Do not repeat or closely restate any of these already-suggested topics:\n" +
+      excludeTitles.map(function(t) { return "- " + t; }).join("\n") + "\n\n";
+  }
+  return "You are a doctoral research advisor. Return compact JSON only \u2014 no markdown, no preamble, no explanation outside the JSON.\n\n" +
+    "Degree level: " + tdState.degree + "\n" +
+    "Program: " + tdState.program + "\n" +
+    "Area of interest: " + tdState.interest + "\n" +
+    "Career goal: " + (tdState.goal || "Not specified") + "\n" +
+    "Population: " + (tdState.population || "Not specified") + "\n" +
+    "Location: " + (tdState.location || "Not specified") + "\n\n" +
+    exclusion +
+    "Return exactly this JSON shape:\n" +
+    "{\"topics\":[{\"topic\":\"specific researchable topic, one sentence\",\"significance\":\"why it matters, one sentence\",\"feasibilityScore\":1-10,\"originalityScore\":1-10,\"recommendedMethodology\":\"methodology name plus a short reason, one sentence\"}]}\n\n" +
+    "Generate exactly " + TD_BATCH_SIZE + " distinct topics, varied in population, context, or angle. Every text field must be exactly one sentence \u2014 no more. No text outside the JSON object.";
+}
+
 tdStep1Next.addEventListener("click", async function() {
   tdState.degree = tdDegreeEl.value;
   tdState.program = tdProgramEl.value;
@@ -1088,23 +1325,14 @@ tdStep1Next.addEventListener("click", async function() {
   tdState.goal = tdGoalEl.value;
   tdState.population = tdPopulationEl.value;
   tdState.location = tdLocationEl.value;
+  tdState.topics = [];
+  tdState.selectedIndex = -1;
   const errorEl = document.getElementById("td-step1-error");
   setLoading(tdStep1Next, true, "Generate Topics");
   showError(errorEl, "");
   try {
-    const prompt = "You are a doctoral research advisor helping a student move from a broad interest area to a set of dissertation-quality topic options.\n\n" +
-      "Degree level: " + tdState.degree + "\n" +
-      "Program: " + tdState.program + "\n" +
-      "Area of interest: " + tdState.interest + "\n" +
-      "Career goal: " + (tdState.goal || "Not specified") + "\n" +
-      "Population: " + (tdState.population || "Not specified") + "\n" +
-      "Geographic location: " + (tdState.location || "Not specified") + "\n\n" +
-      "Return ONLY valid JSON, no markdown, in exactly this shape:\n" +
-      "{\n  \"topics\": [\n    {\n      \"topic\": \"one-sentence, specific, researchable topic\",\n      \"significance\": \"2-3 sentences on why this matters to the field and, if a career goal was given, how it connects to that goal\",\n      \"feasibilityScore\": 7,\n      \"originalityScore\": 7,\n      \"recommendedMethodology\": \"a single qualitative methodology (e.g., phenomenology, case study, grounded theory, narrative inquiry, ethnography) with a one-sentence rationale\"\n    }\n  ]\n}\n" +
-      "Generate exactly 10 distinct, doctoral-quality topics grounded in the student's program, interest, and (when given) population and location — vary population, context, or angle across the ten, not just wording. feasibilityScore and originalityScore are integers from 1 to 10: feasibility reflects practical access to participants/data and reasonable scope for the stated degree level; originality reflects how underexplored the angle is in the existing literature.";
-    const result = await callClaudeAPI(prompt);
+    const result = await callClaudeAPI(tdBuildPrompt(null));
     tdState.topics = result.topics || [];
-    tdState.selectedIndex = -1;
     tdRenderTopicPicks();
     document.getElementById("td-step2-next").disabled = true;
     tdGoToStep(2);
@@ -1115,10 +1343,28 @@ tdStep1Next.addEventListener("click", async function() {
   }
 });
 
+const tdMoreBtn = document.getElementById("td-more");
+tdMoreBtn.addEventListener("click", async function() {
+  const errorEl = document.getElementById("td-step2-error");
+  setLoading(tdMoreBtn, true, "Generate 5 More Topics");
+  showError(errorEl, "");
+  try {
+    const existingTitles = tdState.topics.map(function(t) { return t.topic; });
+    const result = await callClaudeAPI(tdBuildPrompt(existingTitles));
+    tdState.topics = tdState.topics.concat(result.topics || []);
+    tdRenderTopicPicks();
+  } catch (e) {
+    showError(errorEl, "Something went wrong generating more topics.");
+  } finally {
+    setLoading(tdMoreBtn, false, "Generate 5 More Topics");
+  }
+});
+
 function tdRenderTopicPicks() {
   const el = document.getElementById("td-topic-picks");
   el.innerHTML = tdState.topics.map(function(t, i) {
-    return '<div class="qc-topic-pick" data-idx="' + i + '">' +
+    const selectedClass = i === tdState.selectedIndex ? " qc-topic-selected" : "";
+    return '<div class="qc-topic-pick' + selectedClass + '" data-idx="' + i + '">' +
       '<p>' + t.topic + '</p>' +
       '<p class="qc-topic-meta">' + t.significance + '</p>' +
       '<div class="qc-score-row">' + tdScoreBadge("Feasibility", t.feasibilityScore) + tdScoreBadge("Originality", t.originalityScore) + '</div>' +
