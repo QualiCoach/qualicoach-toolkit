@@ -401,6 +401,19 @@
     margin: 6px 0 0;
     font-style: italic;
   }
+
+  /* Problem Builder */
+  .qc-notice {
+    background: #FBF3E2;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--navy);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .qc-notice strong { color: var(--navy); }
 </style>
 </head>
 <body>
@@ -409,7 +422,7 @@
   <div class="qc-header-inner">
     <div class="qc-eyebrow">QualiCoach Research Tools</div>
     <h1 class="qc-h1">Structure &rarr; Alignment &rarr; Clarity</h1>
-    <p class="qc-sub">Six guided builders to move your dissertation proposal forward — one piece at a time.</p>
+    <p class="qc-sub">Seven guided builders to move your dissertation proposal forward — one piece at a time.</p>
     <nav class="qc-tabs">
       <button class="qc-tab active" data-tool="rq">RQ Builder</button>
       <button class="qc-tab" data-tool="purpose">Purpose Builder</button>
@@ -417,6 +430,7 @@
       <button class="qc-tab" data-tool="alignment">Alignment Checker</button>
       <button class="qc-tab" data-tool="progress">Progress Dashboard</button>
       <button class="qc-tab" data-tool="topic">Topic Developer</button>
+      <button class="qc-tab" data-tool="problem">Problem Builder</button>
     </nav>
   </div>
 </header>
@@ -648,6 +662,93 @@
         <button class="qc-secondary" id="td-restart">Start Over</button>
       </div>
     </div>
+  </section>
+
+  <!-- TOOL 7: Problem Statement Builder -->
+  <section class="qc-tool" id="tool-problem">
+    <div class="qc-intro">
+      <div class="qc-intro-eyebrow">Tool 07 — Structure</div>
+      <h2>Problem Builder</h2>
+      <p>Turn a practical problem into a scholarly research problem — with the population, gap, and methodology fit laid out clearly and separately.</p>
+    </div>
+
+    <div class="qc-notice" id="pb-integrity-notice">
+      <strong>Academic integrity notice:</strong> This tool does not generate citations, statistics, or published findings, and none should be assumed from its output. You are responsible for verifying the problem and the gap against current peer-reviewed literature before using this in your proposal.
+    </div>
+
+    <div class="qc-card" id="pb-topic-suggestion" style="display:none;">
+      <p class="qc-note-title">Saved topic found</p>
+      <p class="qc-note-body" id="pb-topic-suggestion-text"></p>
+      <button class="qc-secondary" id="pb-use-topic">Use Selected Topic</button>
+    </div>
+
+    <label class="qc-field">
+      <span class="qc-label">Research Topic</span>
+      <textarea class="qc-input" id="pb-topic" rows="2" placeholder="e.g., How first-generation doctoral students experience belonging during coursework"></textarea>
+    </label>
+    <div class="qc-error" id="pb-topic-vague-error"></div>
+
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Population</span>
+        <input class="qc-input" id="pb-population" placeholder="e.g., First-generation EdD students in year one" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Setting or Context <span style="text-transform:none;font-weight:400;">(optional)</span></span>
+        <input class="qc-input" id="pb-setting" placeholder="e.g., Three public universities in the Midwest" />
+      </label>
+    </div>
+
+    <label class="qc-field">
+      <span class="qc-label">Known Practical Problem</span>
+      <textarea class="qc-input" id="pb-practical" rows="3" placeholder="What is happening, to whom, and why does it matter in practice?"></textarea>
+    </label>
+    <div class="qc-error" id="pb-practical-vague-error"></div>
+
+    <label class="qc-field">
+      <span class="qc-label">Evidence or Observable Consequences</span>
+      <textarea class="qc-input" id="pb-evidence" rows="3" placeholder="What can be pointed to — outcomes, patterns, documented effects?"></textarea>
+    </label>
+    <div class="qc-error" id="pb-evidence-vague-error"></div>
+
+    <label class="qc-field">
+      <span class="qc-label">What Is Not Yet Understood</span>
+      <textarea class="qc-input" id="pb-gap" rows="3" placeholder="What question, mechanism, or experience remains unexamined?"></textarea>
+    </label>
+    <div class="qc-error" id="pb-gap-vague-error"></div>
+
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Degree Level</span>
+        <select class="qc-input" id="pb-degree">
+          <option value="" disabled selected>Select...</option>
+          <option>Master's</option>
+          <option>Doctoral</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Program or Discipline</span>
+        <input class="qc-input" id="pb-program" placeholder="e.g., Educational Leadership, Counseling Psychology" />
+      </label>
+    </div>
+
+    <label class="qc-field">
+      <span class="qc-label">Methodology</span>
+      <select class="qc-input" id="pb-methodology">
+        <option value="" disabled selected>Select...</option>
+        <option>Generic Qualitative</option>
+        <option>Phenomenology</option>
+        <option>Case Study</option>
+        <option>Grounded Theory</option>
+        <option>Narrative Inquiry</option>
+        <option>Ethnography</option>
+      </select>
+    </label>
+
+    <button class="qc-generate" id="pb-generate" disabled>Generate Problem Statement</button>
+    <div class="qc-error" id="pb-error"></div>
+    <div class="qc-output" id="pb-output"></div>
   </section>
 
 </main>
@@ -1081,6 +1182,196 @@ document.getElementById("td-restart").addEventListener("click", function() {
   document.getElementById("td-step2-next").disabled = true;
   tdGoToStep(1);
 });
+
+/* ---------- Tool 7: Problem Statement Builder ---------- */
+var pbLastResult = null;
+var pbLastInputs = {};
+
+var PB_VAGUE_PHRASES = [
+  "no research", "not enough research", "needs more study", "unknown",
+  "not known", "n/a", "none", "not sure", "unsure", "not applicable",
+  "no studies", "not much research", "idk", "more study needed"
+];
+
+var PB_VAGUE_HELP = {
+  "pb-topic": "This is too general to work with. Name the specific phenomenon, population, or context this study will examine — not just the general subject area.",
+  "pb-practical": "This is too general to work with. Describe the specific practical problem — what is happening, to whom, and why it matters — not just that a problem exists.",
+  "pb-evidence": "This is too general to work with. Point to specific, observable signs of the problem, not just that evidence exists or is lacking.",
+  "pb-gap": "This is too general to work with. Name specifically what remains unexamined, rather than a general statement that more study is needed."
+};
+
+function pbIsVague(fieldValue) {
+  const t = (fieldValue || "").trim().toLowerCase().replace(/[.!]+$/, "");
+  if (!t) return false;
+  if (PB_VAGUE_PHRASES.indexOf(t) !== -1) return true;
+  // Short entries that merely restate a vague phrase without adding
+  // specifics are also rejected. Longer sentences that happen to contain
+  // similar wording (e.g. "there is no research on X's experience of Y")
+  // are specific enough to pass and are left alone.
+  if (t.length < 20) {
+    return PB_VAGUE_PHRASES.some(function(p) { return t.indexOf(p) !== -1; });
+  }
+  return false;
+}
+
+const pbRequiredTextFields = ["pb-topic", "pb-population", "pb-practical", "pb-evidence", "pb-gap", "pb-program"];
+const pbVagueCheckFields = ["pb-topic", "pb-practical", "pb-evidence", "pb-gap"];
+const pbSelectFields = ["pb-degree", "pb-methodology"];
+const pbGenerateBtn = document.getElementById("pb-generate");
+
+function pbValidate() {
+  let allFilled = true;
+  let anyVague = false;
+
+  pbRequiredTextFields.forEach(function(id) {
+    if (!document.getElementById(id).value.trim()) allFilled = false;
+  });
+  pbSelectFields.forEach(function(id) {
+    if (!document.getElementById(id).value) allFilled = false;
+  });
+  pbVagueCheckFields.forEach(function(id) {
+    const el = document.getElementById(id);
+    const errorEl = document.getElementById(id + "-vague-error");
+    if (pbIsVague(el.value)) {
+      anyVague = true;
+      showError(errorEl, PB_VAGUE_HELP[id]);
+    } else {
+      showError(errorEl, "");
+    }
+  });
+
+  pbGenerateBtn.disabled = !allFilled || anyVague;
+}
+
+pbRequiredTextFields.concat(pbSelectFields).forEach(function(id) {
+  const el = document.getElementById(id);
+  el.addEventListener("input", pbValidate);
+  el.addEventListener("change", pbValidate);
+});
+
+/* Read a topic saved by Topic Developer, if any. Never auto-fills —
+   only offers a button the student has to click. */
+function pbCheckSavedTopic() {
+  const raw = localStorageSafeGet("qc_topic_developer_selection");
+  const banner = document.getElementById("pb-topic-suggestion");
+  if (!raw) { banner.style.display = "none"; return; }
+  try {
+    const saved = JSON.parse(raw);
+    document.getElementById("pb-topic-suggestion-text").textContent = saved.topic || "";
+    banner.style.display = "block";
+  } catch (e) {
+    banner.style.display = "none";
+  }
+}
+pbCheckSavedTopic();
+
+document.getElementById("pb-use-topic").addEventListener("click", function() {
+  const raw = localStorageSafeGet("qc_topic_developer_selection");
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    document.getElementById("pb-topic").value = saved.topic || "";
+    if (saved.population) document.getElementById("pb-population").value = saved.population;
+    if (saved.program) document.getElementById("pb-program").value = saved.program;
+    pbValidate();
+  } catch (e) {}
+});
+
+pbGenerateBtn.addEventListener("click", async function() {
+  const errorEl = document.getElementById("pb-error");
+  setLoading(pbGenerateBtn, true, "Generate Problem Statement");
+  showError(errorEl, "");
+  try {
+    const topic = document.getElementById("pb-topic").value.trim();
+    const population = document.getElementById("pb-population").value.trim();
+    const setting = document.getElementById("pb-setting").value.trim();
+    const practical = document.getElementById("pb-practical").value.trim();
+    const evidence = document.getElementById("pb-evidence").value.trim();
+    const gap = document.getElementById("pb-gap").value.trim();
+    const degree = document.getElementById("pb-degree").value;
+    const program = document.getElementById("pb-program").value.trim();
+    const methodology = document.getElementById("pb-methodology").value;
+
+    pbLastInputs = { topic: topic, population: population, setting: setting, degree: degree, program: program, methodology: methodology };
+
+    const prompt = "You are a doctoral research advisor helping a student develop a formal problem statement for a qualitative dissertation proposal. " +
+      "You must not invent, imply, or reference any citations, statistics, named studies, or published findings — work only from what the student has provided. " +
+      "If the student's inputs do not clearly support the methodology they selected, say so plainly in the alignmentWarning field; otherwise return an empty string for that field.\n\n" +
+      "Degree level: " + degree + "\n" +
+      "Program or discipline: " + program + "\n" +
+      "Selected methodology: " + methodology + "\n" +
+      "Research topic: " + topic + "\n" +
+      "Population: " + population + "\n" +
+      "Setting or context: " + (setting || "Not specified") + "\n" +
+      "Known practical problem: " + practical + "\n" +
+      "Evidence or observable consequences: " + evidence + "\n" +
+      "What is not yet understood: " + gap + "\n\n" +
+      "Return ONLY valid JSON, no markdown, in exactly this shape:\n" +
+      "{\n" +
+      "  \"practicalProblem\": \"1-2 sentences naming the real-world, social, or practical problem — distinct from the research problem\",\n" +
+      "  \"researchProblemConcise\": \"1-2 sentences stating the research problem in scholarly terms\",\n" +
+      "  \"problemStatementFull\": \"a complete, doctoral-level scholarly problem statement paragraph, 4-6 sentences, integrating the practical problem, population, context, and gap\",\n" +
+      "  \"literatureGap\": \"1-2 sentences naming the gap in existing understanding — distinct from the practical problem, framed only from what the student described, not from outside literature\",\n" +
+      "  \"populationAffected\": \"1 sentence describing who is affected and how\",\n" +
+      "  \"consequences\": \"1-2 sentences on the consequences of the problem persisting, based only on what the student provided\",\n" +
+      "  \"whyStudyNeeded\": \"2-3 sentences on why this study is needed now, for this population and context\",\n" +
+      "  \"nextStepForPurposeStatement\": \"1-2 sentences telling the student what to carry forward into a purpose statement\",\n" +
+      "  \"alignmentWarning\": \"empty string if the inputs support the selected methodology, otherwise 1-3 sentences explaining the mismatch and what would fit better\"\n" +
+      "}\n\n" +
+      "Write in a doctoral-level academic tone. Do not fabricate citations, statistics, author names, or study findings anywhere in the response. Clearly keep practicalProblem, researchProblemConcise, and literatureGap conceptually distinct from one another — a practical/social problem, a scholarly research problem, and a gap in understanding are three different things.";
+
+    const result = await callClaudeAPI(prompt);
+    pbRenderOutput(result);
+  } catch (e) {
+    showError(errorEl, "Something went wrong generating the problem statement.");
+  } finally {
+    setLoading(pbGenerateBtn, false, "Generate Problem Statement");
+  }
+});
+
+function pbRenderOutput(result) {
+  pbLastResult = result;
+  const outputEl = document.getElementById("pb-output");
+  let html = "";
+  html += sectionLabel("Practical Problem") + card(result.practicalProblem);
+  html += sectionLabel("Research Problem (Concise)") + card(result.researchProblemConcise);
+  html += sectionLabel("Full Problem Statement") + card(result.problemStatementFull, false, true);
+  html += sectionLabel("Research / Literature Gap") + card(result.literatureGap);
+  html += sectionLabel("Population Affected") + card(result.populationAffected);
+  html += sectionLabel("Consequences") + card(result.consequences);
+  html += sectionLabel("Why This Study Is Needed") + card(result.whyStudyNeeded);
+  html += sectionLabel("Recommended Next Step") + card(result.nextStepForPurposeStatement);
+  if (result.alignmentWarning && result.alignmentWarning.trim()) {
+    html += sectionLabel("Alignment Warning") +
+      '<div class="qc-verdict-badge qc-verdict-partial" style="display:inline-block;margin-bottom:10px;">Review Needed</div>' +
+      card(result.alignmentWarning);
+  }
+  html += '<button class="qc-secondary" id="pb-confirm" style="margin-top:12px;">Confirm This Problem Statement</button>';
+  outputEl.innerHTML = html;
+
+  document.getElementById("pb-confirm").addEventListener("click", function() {
+    localStorageSafeSet("qc_problem_builder_selection", JSON.stringify({
+      practicalProblem: pbLastResult.practicalProblem,
+      researchProblemConcise: pbLastResult.researchProblemConcise,
+      problemStatementFull: pbLastResult.problemStatementFull,
+      literatureGap: pbLastResult.literatureGap,
+      populationAffected: pbLastResult.populationAffected,
+      consequences: pbLastResult.consequences,
+      whyStudyNeeded: pbLastResult.whyStudyNeeded,
+      nextStepForPurposeStatement: pbLastResult.nextStepForPurposeStatement,
+      alignmentWarning: pbLastResult.alignmentWarning || "",
+      topic: pbLastInputs.topic,
+      population: pbLastInputs.population,
+      setting: pbLastInputs.setting,
+      degree: pbLastInputs.degree,
+      program: pbLastInputs.program,
+      methodology: pbLastInputs.methodology
+    }));
+    const btn = document.getElementById("pb-confirm");
+    btn.textContent = "Saved \u2713";
+    btn.disabled = true;
+  });
+}
 </script>
 
 </body>
