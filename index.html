@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -430,7 +429,7 @@
   <div class="qc-header-inner">
     <div class="qc-eyebrow">QualiCoach Research Tools</div>
     <h1 class="qc-h1">Structure &rarr; Alignment &rarr; Clarity</h1>
-    <p class="qc-sub">Seven guided builders to move your dissertation proposal forward — one piece at a time.</p>
+    <p class="qc-sub">Eight guided builders to move your dissertation proposal forward — one piece at a time.</p>
     <nav class="qc-tabs">
       <button class="qc-tab active" data-tool="rq">RQ Builder</button>
       <button class="qc-tab" data-tool="purpose">Purpose Builder</button>
@@ -439,6 +438,7 @@
       <button class="qc-tab" data-tool="progress">Progress Dashboard</button>
       <button class="qc-tab" data-tool="topic">Topic Developer</button>
       <button class="qc-tab" data-tool="problem">Problem Builder</button>
+      <button class="qc-tab" data-tool="gap">Gap Finder</button>
     </nav>
   </div>
 </header>
@@ -794,6 +794,61 @@
     <button class="qc-generate" id="pb-generate" disabled>Generate Problem Statement</button>
     <div class="qc-error" id="pb-error"></div>
     <div class="qc-output" id="pb-output"></div>
+  </section>
+
+  <!-- TOOL 8: Literature Gap Finder -->
+  <section class="qc-tool" id="tool-gap">
+    <div class="qc-intro">
+      <div class="qc-intro-eyebrow">Tool 08 — Structure</div>
+      <h2>Literature Gap Finder</h2>
+      <p>Get a preliminary read on where your topic may sit relative to the existing literature — population, knowledge, methodological, practical, and contextual gaps, each flagged as a starting point, not a finding.</p>
+    </div>
+
+    <div class="qc-notice" id="gf-integrity-notice">
+      <strong>Academic Integrity Notice:</strong> This tool generates preliminary, AI-assisted observations to help you begin exploring potential research gaps. It does not replace a systematic literature review, and it never fabricates citations, statistics, or study findings. All gaps must be verified against current peer-reviewed literature before use in a dissertation proposal.
+    </div>
+
+    <div class="qc-card" id="gf-saved-suggestion" style="display:none;">
+      <p class="qc-note-title">Saved details found</p>
+      <p class="qc-note-body" id="gf-saved-suggestion-text"></p>
+      <button class="qc-secondary" id="gf-use-saved">Use Saved Details</button>
+    </div>
+
+    <label class="qc-field">
+      <span class="qc-label">Research Topic</span>
+      <input class="qc-input" id="gf-topic" placeholder="e.g., Veterans' experiences seeking peer-to-peer mental health support after COVID-19" />
+    </label>
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Population</span>
+        <input class="qc-input" id="gf-population" placeholder="e.g., Post-9/11 combat veterans" />
+      </label>
+      <label class="qc-field">
+        <span class="qc-label">Setting <span style="text-transform:none;font-weight:400;">(optional)</span></span>
+        <input class="qc-input" id="gf-setting" placeholder="e.g., VA-affiliated peer support groups, Southeastern US" />
+      </label>
+    </div>
+    <label class="qc-field">
+      <span class="qc-label">Keywords</span>
+      <input class="qc-input" id="gf-keywords" placeholder="e.g., peer support, veterans, mental health, COVID-19" />
+    </label>
+    <label class="qc-field">
+      <span class="qc-label">Methodology</span>
+      <select class="qc-input" id="gf-methodology">
+        <option value="" disabled selected>Select...</option>
+        <option>Undecided</option>
+        <option>Generic Qualitative</option>
+        <option>Phenomenology</option>
+        <option>Case Study</option>
+        <option>Grounded Theory</option>
+        <option>Narrative Inquiry</option>
+        <option>Ethnography</option>
+      </select>
+    </label>
+
+    <button class="qc-generate" id="gf-generate" disabled>Find Research Gaps</button>
+    <div class="qc-error" id="gf-error"></div>
+    <div class="qc-output" id="gf-output"></div>
   </section>
 
 </main>
@@ -1617,6 +1672,156 @@ function pbRenderOutput(result) {
     btn.textContent = "Saved \u2713";
     btn.disabled = true;
   });
+}
+
+/* ---------- Tool 8: Literature Gap Finder ---------- */
+const GF_INTEGRITY_FALLBACK = "These research gap statements are AI-generated starting points and must be verified against current peer-reviewed literature before being used in any dissertation proposal.";
+
+const gfRequiredFields = ["gf-topic", "gf-population", "gf-keywords", "gf-methodology"];
+const gfBtn = document.getElementById("gf-generate");
+function gfCheckReady() {
+  gfBtn.disabled = !gfRequiredFields.every(function(id) { return document.getElementById(id).value.trim(); });
+}
+gfRequiredFields.forEach(function(id) {
+  var el = document.getElementById(id);
+  el.addEventListener("input", gfCheckReady);
+  el.addEventListener("change", gfCheckReady);
+});
+
+/* Offer saved Topic/Population from Problem Builder or Topic Developer,
+   same pattern as Interview Builder -- never auto-fills. */
+function gfCheckSavedDetails() {
+  var raw = localStorageSafeGet("qc_problem_builder_selection");
+  var source = "problem";
+  var sourceLabel = "Problem Builder";
+  if (!raw) {
+    raw = localStorageSafeGet("qc_topic_developer_selection");
+    source = "topic";
+    sourceLabel = "Topic Developer";
+  }
+  var banner = document.getElementById("gf-saved-suggestion");
+  if (!raw) { banner.style.display = "none"; return; }
+  try {
+    var saved = JSON.parse(raw);
+    var summary = "From " + sourceLabel + ": " + (saved.topic || "a saved topic");
+    if (saved.population) summary += " — " + saved.population;
+    document.getElementById("gf-saved-suggestion-text").textContent = summary;
+    banner.style.display = "block";
+    banner.dataset.source = source;
+  } catch (e) {
+    banner.style.display = "none";
+  }
+}
+gfCheckSavedDetails();
+
+document.getElementById("gf-use-saved").addEventListener("click", function() {
+  var banner = document.getElementById("gf-saved-suggestion");
+  var key = banner.dataset.source === "problem" ? "qc_problem_builder_selection" : "qc_topic_developer_selection";
+  var raw = localStorageSafeGet(key);
+  if (!raw) return;
+  try {
+    var saved = JSON.parse(raw);
+    if (saved.topic) document.getElementById("gf-topic").value = saved.topic;
+    if (saved.population) document.getElementById("gf-population").value = saved.population;
+    gfCheckReady();
+  } catch (e) {}
+});
+
+function gfLevelBadge(label, level) {
+  var tier = level === "High" ? "qc-score-strong" : level === "Moderate" ? "qc-score-moderate" : "qc-score-weak";
+  return '<span class="qc-score-badge ' + tier + '">' + label + ": " + level + "</span>";
+}
+function gfOriginalityBadge(value) {
+  var num = parseInt(value, 10) || 0;
+  var tier = num >= 8 ? "qc-score-strong" : num >= 5 ? "qc-score-moderate" : "qc-score-weak";
+  return '<span class="qc-score-badge ' + tier + '">Originality: ' + value + '</span>';
+}
+
+// Field lengths are capped explicitly (2-3 sentences per gap, one sentence
+// per future-research item) to keep total output compact -- the same
+// Netlify inactivity-timeout risk that hit Topic Developer's 10-topic
+// output applies to any tool generating six-plus prose fields, so this
+// tool is scoped conservatively from the start rather than fixed later.
+function gfBuildPrompt(topic, population, setting, keywords, methodology) {
+  return "You are the QualiCoach AI Literature Gap Finder, an expert doctoral qualitative research advisor.\n" +
+    "Your role is to help doctoral students identify potential research gaps from a proposed qualitative research topic.\n\n" +
+    "IMPORTANT RULES\n" +
+    "\u2022 Never fabricate citations, statistics, study findings, author names, or publication years.\n" +
+    "\u2022 Never claim a research gap is proven in the literature.\n" +
+    "\u2022 Present all gaps as preliminary observations requiring verification through peer-reviewed literature.\n" +
+    "\u2022 Use cautious academic language such as: \"appears underexplored\", \"may be limited\", \"requires verification\", \"current literature should be reviewed\".\n" +
+    "\u2022 Recommend only qualitative methodologies. Do not recommend quantitative or mixed methods.\n" +
+    "\u2022 Return clean JSON only. Do not include markdown. Do not include explanations outside the JSON.\n\n" +
+    "The student provides:\n" +
+    "Research Topic: " + topic + "\n" +
+    "Population: " + population + "\n" +
+    "Setting: " + (setting || "Not specified") + "\n" +
+    "Keywords: " + keywords + "\n" +
+    "Methodology: " + methodology + "\n\n" +
+    "Produce exactly this JSON schema:\n" +
+    "{\"researchFocus\":\"\",\"populationGap\":\"\",\"knowledgeGap\":\"\",\"methodologicalGap\":\"\",\"practicalGap\":\"\",\"contextualGap\":\"\",\"futureResearch\":[\"\",\"\",\"\",\"\",\"\"],\"recommendedMethodology\":\"\",\"confidence\":\"\",\"researchPotential\":\"\",\"originalityScore\":\"\",\"academicIntegrityNotice\":\"\"}\n\n" +
+    "Requirements:\n" +
+    "- researchFocus: one concise paragraph (2-3 sentences) summarizing the proposed study.\n" +
+    "- populationGap: 1-2 sentences identifying populations that appear less explored; state that verification through current literature is required.\n" +
+    "- knowledgeGap: 1-2 sentences describing what appears to remain insufficiently understood.\n" +
+    "- methodologicalGap: 1-2 sentences on why qualitative inquiry may provide additional understanding.\n" +
+    "- practicalGap: 1-2 sentences on why practitioners may benefit from additional qualitative evidence.\n" +
+    "- contextualGap: 1-2 sentences identifying settings or contexts that appear underrepresented.\n" +
+    "- futureResearch: exactly five realistic qualitative research directions, one sentence each.\n" +
+    "- recommendedMethodology: choose only one of Phenomenology, Generic Qualitative, Case Study, Narrative Inquiry, Grounded Theory, Ethnography.\n" +
+    "- confidence: return exactly one of Low, Moderate, High.\n" +
+    "- researchPotential: return exactly one of Low, Moderate, High.\n" +
+    "- originalityScore: return only in the form \"X/10\".\n" +
+    "- academicIntegrityNotice: always return exactly this string: \"" + GF_INTEGRITY_FALLBACK + "\"\n\n" +
+    "Keep every field concise as specified above \u2014 no extra commentary, no text outside the JSON object.";
+}
+
+gfBtn.addEventListener("click", async function() {
+  const topic = document.getElementById("gf-topic").value.trim();
+  const population = document.getElementById("gf-population").value.trim();
+  const setting = document.getElementById("gf-setting").value.trim();
+  const keywords = document.getElementById("gf-keywords").value.trim();
+  const methodology = document.getElementById("gf-methodology").value;
+  const errorEl = document.getElementById("gf-error");
+  const outputEl = document.getElementById("gf-output");
+  setLoading(gfBtn, true, "Find Research Gaps");
+  showError(errorEl, "");
+  outputEl.innerHTML = "";
+  try {
+    const result = await callClaudeAPI(gfBuildPrompt(topic, population, setting, keywords, methodology));
+    gfRenderOutput(result);
+  } catch (e) {
+    showError(errorEl, "Something went wrong finding research gaps.");
+  } finally {
+    setLoading(gfBtn, false, "Find Research Gaps");
+  }
+});
+
+function gfRenderOutput(result) {
+  const outputEl = document.getElementById("gf-output");
+  let html = "";
+  html += sectionLabel("Research Focus") + card(result.researchFocus);
+  html += sectionLabel("Population Gap") + card(result.populationGap);
+  html += sectionLabel("Knowledge Gap") + card(result.knowledgeGap);
+  html += sectionLabel("Methodological Gap") + card(result.methodologicalGap);
+  html += sectionLabel("Practical Gap") + card(result.practicalGap);
+  html += sectionLabel("Contextual Gap") + card(result.contextualGap);
+
+  html += sectionLabel("Future Research Directions");
+  (result.futureResearch || []).forEach(function(r) { html += card(r); });
+
+  html += sectionLabel("Recommended Methodology") + card(result.recommendedMethodology);
+
+  html += sectionLabel("Assessment");
+  html += '<div class="qc-score-row" style="margin-bottom:14px;">' +
+    gfLevelBadge("Confidence", result.confidence) +
+    gfLevelBadge("Research Potential", result.researchPotential) +
+    gfOriginalityBadge(result.originalityScore) +
+    '</div>';
+
+  html += '<div class="qc-notice">' + (result.academicIntegrityNotice || GF_INTEGRITY_FALLBACK) + '</div>';
+
+  outputEl.innerHTML = html;
 }
 </script>
 
