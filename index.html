@@ -421,7 +421,20 @@
     margin-bottom: 20px;
   }
   .qc-notice strong { color: var(--navy); }
+
+  /* Literature Matrix — expandable cards reuse .qc-card; only summary needs styling */
+  details.qc-card summary {
+    cursor: pointer;
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--navy);
+    outline: none;
+  }
+  details.qc-card[open] summary { margin-bottom: 12px; }
+  details.qc-card summary::-webkit-details-marker { color: var(--gold); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -429,7 +442,7 @@
   <div class="qc-header-inner">
     <div class="qc-eyebrow">QualiCoach Research Tools</div>
     <h1 class="qc-h1">Structure &rarr; Alignment &rarr; Clarity</h1>
-    <p class="qc-sub">Eight guided builders to move your dissertation proposal forward — one piece at a time.</p>
+    <p class="qc-sub">Nine guided builders to move your dissertation proposal forward — one piece at a time.</p>
     <nav class="qc-tabs">
       <button class="qc-tab active" data-tool="rq">RQ Builder</button>
       <button class="qc-tab" data-tool="purpose">Purpose Builder</button>
@@ -439,6 +452,7 @@
       <button class="qc-tab" data-tool="topic">Topic Developer</button>
       <button class="qc-tab" data-tool="problem">Problem Builder</button>
       <button class="qc-tab" data-tool="gap">Gap Finder</button>
+      <button class="qc-tab" data-tool="matrix">Literature Matrix</button>
     </nav>
   </div>
 </header>
@@ -849,6 +863,52 @@
     <button class="qc-generate" id="gf-generate" disabled>Find Research Gaps</button>
     <div class="qc-error" id="gf-error"></div>
     <div class="qc-output" id="gf-output"></div>
+  </section>
+
+  <!-- TOOL 9: Literature Matrix Builder -->
+  <section class="qc-tool" id="tool-matrix">
+    <div class="qc-intro">
+      <div class="qc-intro-eyebrow">Tool 09 — Structure</div>
+      <h2>Literature Matrix</h2>
+      <p>Turn a stack of article abstracts into a structured comparison matrix — purpose, methodology, findings, and how each one relates to your own study, side by side.</p>
+    </div>
+
+    <div class="qc-notice" id="lm-integrity-notice">
+      <strong>Academic Integrity Notice:</strong> This tool summarizes only what is stated in the abstracts you paste in — it does not access external databases and cannot verify sources independently. An APA citation is generated only when the pasted text itself contains enough bibliographic detail (authors, year, title, journal); otherwise the tool will say so rather than invent one. You are responsible for verifying every citation, finding, and detail against the original source before using this in your literature review.
+    </div>
+
+    <label class="qc-field">
+      <span class="qc-label">Research Topic</span>
+      <input class="qc-input" id="lm-topic" placeholder="e.g., Veterans' experiences seeking peer-to-peer mental health support after COVID-19" />
+    </label>
+    <label class="qc-field">
+      <span class="qc-label">Article Abstracts</span>
+      <textarea class="qc-input" id="lm-abstracts" rows="10" placeholder="Paste one or more article abstracts. To add more than one, separate each abstract with a line containing only three dashes:
+
+Abstract text for article one...
+
+---
+
+Abstract text for article two..."></textarea>
+    </label>
+    <div class="qc-grid-two">
+      <label class="qc-field">
+        <span class="qc-label">Methodology <span style="text-transform:none;font-weight:400;">(optional)</span></span>
+        <select class="qc-input" id="lm-methodology">
+          <option value="" selected>Not specified</option>
+          <option>Generic Qualitative</option>
+          <option>Phenomenology</option>
+          <option>Case Study</option>
+          <option>Grounded Theory</option>
+          <option>Narrative Inquiry</option>
+          <option>Ethnography</option>
+        </select>
+      </label>
+    </div>
+
+    <button class="qc-generate" id="lm-generate" disabled>Generate Literature Matrix</button>
+    <div class="qc-error" id="lm-error"></div>
+    <div class="qc-output" id="lm-output"></div>
   </section>
 
 </main>
@@ -1822,6 +1882,255 @@ function gfRenderOutput(result) {
   html += '<div class="qc-notice">' + (result.academicIntegrityNotice || GF_INTEGRITY_FALLBACK) + '</div>';
 
   outputEl.innerHTML = html;
+}
+
+/* ---------- Tool 9: Literature Matrix Builder ---------- */
+var lmState = { topic: "", methodology: "", articles: [] };
+
+const LM_FIELD_LABELS = [
+  "APA Citation", "Purpose", "Research Question(s)", "Methodology",
+  "Population/Sample", "Data Collection", "Data Analysis", "Major Findings",
+  "Limitations", "Relevance to Your Study", "Suggested Literature Review Theme",
+  "Identified Gap", "Notes"
+];
+const LM_FIELD_KEYS = [
+  "apaCitation", "purpose", "researchQuestions", "methodology",
+  "populationSample", "dataCollection", "dataAnalysis", "majorFindings",
+  "limitations", "relevance", "suggestedTheme", "identifiedGap", "notes"
+];
+const LM_NOT_STATED = "Not stated in the provided abstract.";
+const LM_NO_CITATION = "Insufficient information in the provided text to generate an APA citation \u2014 add citation manually.";
+
+const lmRequiredFields = ["lm-topic", "lm-abstracts"];
+const lmBtn = document.getElementById("lm-generate");
+function lmCheckReady() {
+  lmBtn.disabled = !lmRequiredFields.every(function(id) { return document.getElementById(id).value.trim(); });
+}
+lmRequiredFields.forEach(function(id) {
+  var el = document.getElementById(id);
+  el.addEventListener("input", lmCheckReady);
+  el.addEventListener("change", lmCheckReady);
+});
+
+// One API call per abstract, processed sequentially. A single call covering
+// every pasted abstract would scale output length with article count and
+// risk the same Netlify inactivity-timeout that hit Topic Developer -- this
+// keeps each request's output small and bounded regardless of how many
+// abstracts a student pastes in.
+function lmBuildPrompt(topic, methodology, abstractText) {
+  return "You are a doctoral research assistant building one row of a literature review matrix from a single article abstract.\n\n" +
+    "CRITICAL RULES:\n" +
+    "\u2022 Only generate an APA citation if the abstract text itself contains enough bibliographic information (author name(s), publication year, article title, and journal or source name). If that information is not present, return exactly this string for apaCitation: \"" + LM_NO_CITATION + "\"\n" +
+    "\u2022 Never invent, guess, or infer author names, publication years, journal titles, volume numbers, issue numbers, or page numbers, even if it seems likely.\n" +
+    "\u2022 Never fabricate findings, statistics, or details not present in the abstract.\n" +
+    "\u2022 If a field cannot be determined from the abstract, return exactly this string for that field: \"" + LM_NOT_STATED + "\"\n\n" +
+    "Student's research topic: " + topic + "\n" +
+    "Student's intended methodology: " + (methodology || "Not specified") + "\n\n" +
+    "Article abstract:\n" + abstractText + "\n\n" +
+    "Return ONLY compact JSON, no markdown, no explanation outside the JSON, in exactly this shape:\n" +
+    "{\"apaCitation\":\"\",\"purpose\":\"\",\"researchQuestions\":\"\",\"methodology\":\"\",\"populationSample\":\"\",\"dataCollection\":\"\",\"dataAnalysis\":\"\",\"majorFindings\":\"\",\"limitations\":\"\",\"relevance\":\"\",\"suggestedTheme\":\"\",\"identifiedGap\":\"\",\"notes\":\"\"}\n\n" +
+    "Keep every field to 1-2 sentences maximum, based only on what the abstract states. relevance must relate this article specifically to the student's stated research topic" +
+    (methodology ? " and intended methodology" : "") +
+    ". identifiedGap should note what this specific article does not address, framed cautiously (e.g. \"does not appear to address...\"), never as a proven literature-wide gap.";
+}
+
+lmBtn.addEventListener("click", async function() {
+  const topic = document.getElementById("lm-topic").value.trim();
+  const methodology = document.getElementById("lm-methodology").value;
+  const abstractsRaw = document.getElementById("lm-abstracts").value;
+  const errorEl = document.getElementById("lm-error");
+  const outputEl = document.getElementById("lm-output");
+  showError(errorEl, "");
+  outputEl.innerHTML = "";
+
+  const abstracts = abstractsRaw.split(/\n\s*-{3,}\s*\n/).map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+  if (abstracts.length === 0) {
+    showError(errorEl, "Please paste at least one article abstract.");
+    return;
+  }
+
+  lmState.topic = topic;
+  lmState.methodology = methodology;
+  lmState.articles = [];
+
+  const cardsWrap = document.createElement("div");
+  cardsWrap.id = "lm-cards";
+  outputEl.appendChild(cardsWrap);
+
+  for (let i = 0; i < abstracts.length; i++) {
+    setLoading(lmBtn, true, "Processing " + (i + 1) + " of " + abstracts.length + "\u2026");
+    try {
+      const result = await callClaudeAPI(lmBuildPrompt(topic, methodology, abstracts[i]));
+      lmState.articles.push({ result: result, error: false });
+    } catch (e) {
+      lmState.articles.push({ result: null, error: true });
+    }
+    lmRenderCards();
+  }
+
+  setLoading(lmBtn, false, "Generate Literature Matrix");
+
+  if (lmState.articles.some(function(a) { return !a.error; })) {
+    lmRenderExportButtons();
+  } else {
+    showError(errorEl, "None of the abstracts could be processed. Please try again.");
+  }
+});
+
+function lmRenderCards() {
+  const container = document.getElementById("lm-cards");
+  if (!container) return;
+  container.innerHTML = lmState.articles.map(function(a, i) {
+    if (a.error || !a.result) {
+      return '<div class="qc-card"><p class="qc-note-title">Article ' + (i + 1) + '</p>' +
+        '<p class="qc-note-body" style="color:var(--error-text);">Something went wrong processing this abstract. You can re-run it on its own if needed.</p></div>';
+    }
+    const r = a.result;
+    const hasCitation = r.apaCitation && r.apaCitation.indexOf("Insufficient information") === -1;
+    const title = hasCitation ? r.apaCitation : "Article " + (i + 1) + " \u2014 citation unavailable";
+    const body = LM_FIELD_KEYS.map(function(key, j) {
+      return '<p class="qc-note-title">' + LM_FIELD_LABELS[j] + '</p><p class="qc-note-body">' + (r[key] || LM_NOT_STATED) + '</p>';
+    }).join("");
+    return '<details class="qc-card"><summary>' + title + '</summary><div class="lm-body">' + body + '</div></details>';
+  }).join("");
+}
+
+function lmGetRows() {
+  return lmState.articles.filter(function(a) { return !a.error && a.result; }).map(function(a) {
+    return LM_FIELD_KEYS.map(function(k) { return a.result[k] || LM_NOT_STATED; });
+  });
+}
+
+function lmBuildPlainText() {
+  const rows = lmGetRows();
+  const lines = ["LITERATURE MATRIX", "Topic: " + lmState.topic, ""];
+  rows.forEach(function(row, i) {
+    lines.push("ARTICLE " + (i + 1));
+    row.forEach(function(val, j) { lines.push(LM_FIELD_LABELS[j] + ": " + val); });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+function lmCsvEscape(val) {
+  let s = String(val == null ? "" : val);
+  if (s.indexOf('"') !== -1 || s.indexOf(",") !== -1 || s.indexOf("\n") !== -1) {
+    s = '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function lmBuildCsv() {
+  const rows = lmGetRows();
+  const lines = [LM_FIELD_LABELS.map(lmCsvEscape).join(",")];
+  rows.forEach(function(row) { lines.push(row.map(lmCsvEscape).join(",")); });
+  return lines.join("\r\n");
+}
+
+function lmDownloadBlob(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function lmDownloadCsv() {
+  lmDownloadBlob(lmBuildCsv(), "literature-matrix.csv", "text/csv");
+}
+
+// Word export uses an HTML document served with a .doc extension and
+// application/msword MIME type -- a long-established, dependency-free
+// technique that Microsoft Word and Google Docs both open correctly via
+// their HTML import filter. It is not a native .docx (OOXML) file; a true
+// .docx would require either hand-rolling OOXML XML (fragile, easy to
+// corrupt) or a second heavy library. This is the pragmatic middle ground.
+function lmDownloadWord() {
+  const rows = lmGetRows();
+  let html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>" +
+    "<head><meta charset='utf-8'><title>Literature Matrix</title></head><body>" +
+    "<h1 style='font-family:Georgia,serif;color:#0F1F3D;'>Literature Matrix</h1>" +
+    "<p style='font-family:Arial,sans-serif;color:#5B6478;'>Topic: " + lmState.topic + "</p>";
+  rows.forEach(function(row, i) {
+    html += "<h2 style='font-family:Georgia,serif;color:#0F1F3D;font-size:16px;margin-top:24px;'>Article " + (i + 1) + "</h2>";
+    html += "<table style='border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:12px;'>";
+    row.forEach(function(val, j) {
+      html += "<tr><td style='border:1px solid #DCD6C6;padding:6px;font-weight:bold;width:180px;vertical-align:top;'>" + LM_FIELD_LABELS[j] + "</td>" +
+        "<td style='border:1px solid #DCD6C6;padding:6px;'>" + val + "</td></tr>";
+    });
+    html += "</table>";
+  });
+  html += "</body></html>";
+  lmDownloadBlob(html, "literature-matrix.doc", "application/msword");
+}
+
+// Excel export uses SheetJS (loaded via CDN in <head>) to produce a genuine
+// .xlsx binary -- hand-rolling OOXML spreadsheet XML is not practical to do
+// reliably, so this is the one export format with an external dependency.
+function lmDownloadExcel() {
+  if (typeof XLSX === "undefined") {
+    alert("The Excel export library failed to load. Check your connection and try again, or use CSV export instead.");
+    return;
+  }
+  const rows = lmGetRows();
+  const aoa = [LM_FIELD_LABELS].concat(rows);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Literature Matrix");
+  XLSX.writeFile(wb, "literature-matrix.xlsx");
+}
+
+function lmFallbackCopy(text, done) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    done(ok);
+  } catch (e) {
+    done(false);
+  }
+}
+
+function lmCopyMatrix() {
+  const text = lmBuildPlainText();
+  const btn = document.getElementById("lm-copy");
+  function done(ok) {
+    btn.textContent = ok ? "Copied \u2713" : "Copy failed";
+    setTimeout(function() { btn.textContent = "Copy Matrix"; }, 2000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { done(true); }, function() { lmFallbackCopy(text, done); });
+  } else {
+    lmFallbackCopy(text, done);
+  }
+}
+
+function lmRenderExportButtons() {
+  const outputEl = document.getElementById("lm-output");
+  const row = document.createElement("div");
+  row.className = "qc-step-nav";
+  row.style.marginTop = "20px";
+  row.style.flexWrap = "wrap";
+  row.innerHTML =
+    '<button class="qc-secondary" id="lm-copy">Copy Matrix</button>' +
+    '<button class="qc-secondary" id="lm-word">Download Word</button>' +
+    '<button class="qc-secondary" id="lm-excel">Download Excel</button>' +
+    '<button class="qc-secondary" id="lm-csv">Download CSV</button>';
+  outputEl.appendChild(row);
+  document.getElementById("lm-copy").addEventListener("click", lmCopyMatrix);
+  document.getElementById("lm-word").addEventListener("click", lmDownloadWord);
+  document.getElementById("lm-excel").addEventListener("click", lmDownloadExcel);
+  document.getElementById("lm-csv").addEventListener("click", lmDownloadCsv);
 }
 </script>
 
