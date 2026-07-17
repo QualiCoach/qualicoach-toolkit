@@ -55,7 +55,11 @@ exports.handler = async function (event) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1000,
+        // Raised from 1000 -> 4096 to support Topic Developer's richer output
+        // (10 topics x 5 fields each). This is a ceiling, not a target — every
+        // existing tool's smaller output still finishes well under 1000 tokens,
+        // so this change doesn't alter their behavior.
+        max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       }),
     });
